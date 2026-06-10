@@ -75,15 +75,18 @@ select.ctl{padding-right:6px;max-width:48vw}
 
 /* ===== CARD (grid: 2 mặt cùng ô -> thẻ tự giãn theo nội dung dài) ===== */
 .stage{max-width:760px;margin:20px auto;padding:0 16px}
-.cardbox{perspective:1500px;position:relative}
-.card{position:relative;display:grid;transform-style:preserve-3d;
+.cardbox{perspective:1500px;-webkit-perspective:1500px;position:relative}
+.card{position:relative;display:grid;transform-style:preserve-3d;-webkit-transform-style:preserve-3d;
   transition:transform .55s var(--ease-out);will-change:transform;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:pointer}
-.card.flipped{transform:rotateY(180deg)}
+.card.flipped{transform:rotateY(180deg);-webkit-transform:rotateY(180deg)}
 .card.dragging{transition:none}
 .face{grid-area:1/1;backface-visibility:hidden;-webkit-backface-visibility:hidden;
   border:3px solid var(--ink);background:#fff;box-shadow:7px 7px 0 var(--red);
-  display:flex;flex-direction:column;padding:54px 22px 18px;min-height:380px}
-.face.back{transform:rotateY(180deg);background:#FFFDF6}
+  display:flex;flex-direction:column;padding:54px 22px 18px;min-height:380px;
+  opacity:1;transition:opacity 0s linear .28s}
+.face.back{transform:rotateY(180deg);-webkit-transform:rotateY(180deg);background:#FFFDF6;opacity:0}
+.card.flipped .face.front{opacity:0}
+.card.flipped .face.back{opacity:1}
 .qtab{position:absolute;top:-3px;left:-3px;background:var(--red);color:var(--paper);
   font-weight:900;font-size:.95rem;padding:6px 14px;border:3px solid var(--ink);letter-spacing:1px;z-index:2}
 .qtab .est{color:var(--gold)}
@@ -312,7 +315,8 @@ function saveProgress(){
   clearTimeout(saveTimer);
   saveTimer=setTimeout(async ()=>{
     const payload = JSON.stringify({
-      learned:[...S.learned], starred:[...S.starred], wrong:[...S.wrong], hideLearned:S.hideLearned
+      learned:[...S.learned], starred:[...S.starred], wrong:[...S.wrong], hideLearned:S.hideLearned,
+      pos:S.pos, deckDef:S.deckDef, mode:S.mode, shuffle:S.shuffle
     });
     S.mem[KEY]=payload;
     try{ localStorage.setItem(KEY,payload); }catch(e){}
@@ -591,6 +595,13 @@ function markCard(known){
   if(known){S.learned.add(q.id);toast(`Câu ${q.id}: đã thuộc ✓`);}
   else{S.learned.delete(q.id);S.wrong.add(q.id);toast(`Câu ${q.id}: đưa vào câu cần ôn`);}
   saveProgress();
+  if(known && S.mode==='flash' && S.hideLearned){
+    S.deck.splice(S.pos,1);
+    if(!S.deck.length){S.anim='pop';S.flipped=false;render();toast('Đã thuộc hết các câu — quá giỏi!');saveProgress();return;}
+    if(S.pos>=S.deck.length)S.pos=S.deck.length-1;
+    S.anim='right';S.flipped=false;S.sel.clear();S.graded=false;S.fresh=true;render();saveProgress();
+    return;
+  }
   advance(known?1:-1);
 }
 function advance(dir){
@@ -599,10 +610,10 @@ function advance(dir){
     if(S.mode==='quiz'){S.done=true;}
     else{S.anim='pop';toast('Hết bộ thẻ — xáo trộn và ôn lại nhé!');}
   } else S.pos++;
-  S.flipped=false;S.sel.clear();S.graded=false;S.fresh=true;render();
+  S.flipped=false;S.sel.clear();S.graded=false;S.fresh=true;render();saveProgress();
 }
 function prev(){
-  if(S.pos>0){S.pos--;S.anim='left';S.flipped=false;S.sel.clear();S.graded=false;S.done=false;S.fresh=true;render();}
+  if(S.pos>0){S.pos--;S.anim='left';S.flipped=false;S.sel.clear();S.graded=false;S.done=false;S.fresh=true;render();saveProgress();}
 }
 
 /* ================= ACTIONS ================= */
@@ -617,7 +628,7 @@ function grade(q){
   else{S.runNo++;S.wrong.add(q.id);}
   saveProgress();
 }
-function setDeck(def){S.deckDef=def;buildDeck();syncRangeSel();render();}
+function setDeck(def){S.deckDef=def;buildDeck();syncRangeSel();render();saveProgress();}
 function syncRangeSel(){
   const sel=$('rangeSel');const d=S.deckDef;
   let other=sel.querySelector('option[value="__other"]');
@@ -677,15 +688,15 @@ document.addEventListener('click',e=>{
 });
 
 /* tabs */
-$('tabFlash').onclick=()=>{if(S.mode!=='flash'){S.mode='flash';$('tabFlash').classList.add('on');$('tabQuiz').classList.remove('on');buildDeck();render();}};
-$('tabQuiz').onclick=()=>{if(S.mode!=='quiz'){S.mode='quiz';$('tabQuiz').classList.add('on');$('tabFlash').classList.remove('on');buildDeck();render();}};
+$('tabFlash').onclick=()=>{if(S.mode!=='flash'){S.mode='flash';$('tabFlash').classList.add('on');$('tabQuiz').classList.remove('on');buildDeck();render();saveProgress();}};
+$('tabQuiz').onclick=()=>{if(S.mode!=='quiz'){S.mode='quiz';$('tabQuiz').classList.add('on');$('tabFlash').classList.remove('on');buildDeck();render();saveProgress();}};
 /* controls */
 $('rangeSel').onchange=e=>{
   const v=e.target.value;
   if(v==='all')setDeck({type:'all'});
   else if(v.startsWith('r')){const[a,b]=v.slice(1).split('-').map(Number);setDeck({type:'range',a,b});}
 };
-$('shuffleChk').onchange=e=>{S.shuffle=e.target.checked;buildDeck();render();};
+$('shuffleChk').onchange=e=>{S.shuffle=e.target.checked;buildDeck();render();saveProgress();};
 $('hideLearnedChk').onchange=e=>{S.hideLearned=e.target.checked;saveProgress();buildDeck();render();};
 $('chipStar').onclick=()=>setDeck({type:'starred'});
 $('chipWrong').onclick=()=>setDeck({type:'wrong'});
@@ -754,8 +765,14 @@ document.addEventListener('keydown',e=>{
   if(p){
     S.learned=new Set(p.learned||[]);S.starred=new Set(p.starred||[]);S.wrong=new Set(p.wrong||[]);
     S.hideLearned=!!p.hideLearned;$('hideLearnedChk').checked=S.hideLearned;
+    if(p.shuffle){S.shuffle=true;$('shuffleChk').checked=true;}
+    if(p.mode==='quiz'){S.mode='quiz';$('tabQuiz').classList.add('on');$('tabFlash').classList.remove('on');}
+    if(p.deckDef&&p.deckDef.type){S.deckDef=p.deckDef;}
   }
-  buildDeck();render();
+  buildDeck();
+  if(p&&Number.isInteger(p.pos)&&p.pos>0&&p.pos<S.deck.length){S.pos=p.pos;S.anim='pop';}
+  syncRangeSel();
+  render();
 })();
 </script>
 </body>
