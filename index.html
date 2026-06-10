@@ -77,13 +77,13 @@ select.ctl{padding-right:6px;max-width:48vw}
 .stage{max-width:760px;margin:20px auto;padding:0 16px}
 .cardbox{perspective:1500px;-webkit-perspective:1500px;position:relative}
 .card{position:relative;display:grid;transform-style:preserve-3d;-webkit-transform-style:preserve-3d;
-  transition:transform .55s var(--ease-out);will-change:transform;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:pointer}
+  transition:transform .5s ease-in-out;will-change:transform;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:pointer}
 .card.flipped{transform:rotateY(180deg);-webkit-transform:rotateY(180deg)}
 .card.dragging{transition:none}
 .face{grid-area:1/1;backface-visibility:hidden;-webkit-backface-visibility:hidden;
   border:3px solid var(--ink);background:#fff;box-shadow:7px 7px 0 var(--red);
   display:flex;flex-direction:column;padding:54px 22px 18px;min-height:380px;
-  opacity:1;transition:opacity 0s linear .28s}
+  opacity:1;transition:opacity 0s linear .25s}
 .face.back{transform:rotateY(180deg);-webkit-transform:rotateY(180deg);background:#FFFDF6;opacity:0}
 .card.flipped .face.front{opacity:0}
 .card.flipped .face.back{opacity:1}
