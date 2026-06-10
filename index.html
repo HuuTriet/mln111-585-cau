@@ -301,6 +301,10 @@ async function loadProgress(){
       if(r && r.value) return JSON.parse(r.value);
     }
   }catch(e){}
+  try{
+    const v = localStorage.getItem(KEY);
+    if(v) return JSON.parse(v);
+  }catch(e){}
   return S.mem[KEY] ? JSON.parse(S.mem[KEY]) : null;
 }
 let saveTimer=null;
@@ -311,6 +315,7 @@ function saveProgress(){
       learned:[...S.learned], starred:[...S.starred], wrong:[...S.wrong], hideLearned:S.hideLearned
     });
     S.mem[KEY]=payload;
+    try{ localStorage.setItem(KEY,payload); }catch(e){}
     try{ if(window.storage && window.storage.set) await window.storage.set(KEY,payload); }catch(e){}
   },400);
 }
@@ -698,6 +703,7 @@ $('searchBox').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
 $('resetBtn').onclick=async()=>{
   if(!confirm('Xóa toàn bộ tiến độ (đã thuộc, đánh dấu, câu sai)?'))return;
   S.learned.clear();S.starred.clear();S.wrong.clear();S.mem={};
+  try{localStorage.removeItem(KEY);}catch(e){}
   try{if(window.storage&&window.storage.delete)await window.storage.delete(KEY);}catch(e){}
   buildDeck();render();toast('Đã xóa tiến độ');
 };
