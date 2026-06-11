@@ -624,9 +624,16 @@ function toast(msg){
 function grade(q){
   S.graded=true;
   const ok=isRunCorrect(q);
-  if(ok){S.runOk++;if(S.wrong.delete(q.id)){toast('Đã gỡ khỏi danh sách câu sai ✓');}}
-  else{S.runNo++;S.wrong.add(q.id);}
-  saveProgress();
+  if(ok){
+    S.runOk++;
+    const fresh=!S.learned.has(q.id);
+    S.learned.add(q.id);
+    if(S.wrong.delete(q.id))toast('Đã gỡ khỏi câu sai · tính là đã thuộc ✓');
+    else if(fresh)toast(`Câu ${q.id}: đã thuộc ✓`);
+  }else{
+    S.runNo++;S.wrong.add(q.id);S.learned.delete(q.id);
+  }
+  renderHeaderStats();saveProgress();
 }
 function setDeck(def){S.deckDef=def;buildDeck();syncRangeSel();render();saveProgress();}
 function syncRangeSel(){
