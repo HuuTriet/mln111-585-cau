@@ -292,7 +292,8 @@ const S = {
   learned:new Set(), starred:new Set(), wrong:new Set(),
   anim:'pop',          // 'right' | 'left' | 'pop' | null — hiệu ứng vào của thẻ, dùng 1 lần
   fresh:true,          // câu mới -> stagger đáp án quiz
-  mem:{}
+  mem:{},
+  answers:{}           // qid -> {sel:[...]} : đáp án từng câu, để quay lại không mất
 };
 
 /* ================= STORAGE (an toàn, fallback bộ nhớ) ================= */
@@ -317,7 +318,7 @@ function saveProgress(){
     const payload = JSON.stringify({
       learned:[...S.learned], starred:[...S.starred], wrong:[...S.wrong], hideLearned:S.hideLearned,
       pos:S.pos, deckDef:S.deckDef, mode:S.mode, shuffle:S.shuffle,
-      runOk:S.runOk, runNo:S.runNo, done:S.done, graded:S.graded, sel:[...S.sel]
+      runOk:S.runOk, runNo:S.runNo, done:S.done, graded:S.graded, sel:[...S.sel], answers:S.answers
     });
     S.mem[KEY]=payload;
     try{ localStorage.setItem(KEY,payload); }catch(e){}
@@ -343,7 +344,7 @@ function buildDeck(){
     for(let i=ids.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]];}
   }
   S.deck=ids;S.pos=0;S.flipped=false;S.sel.clear();S.graded=false;
-  S.runOk=0;S.runNo=0;S.done=false;S.anim='pop';S.fresh=true;
+  S.runOk=0;S.runNo=0;S.done=false;S.anim='pop';S.fresh=true;S.answers={};
 }
 function deckLabel(){
   const d=S.deckDef;
@@ -605,16 +606,23 @@ function markCard(known){
   }
   advance(known?1:-1);
 }
+// nạp lại đáp án đã chọn của câu ở vị trí hiện tại (để quay lại / tiến tới không mất)
+function loadAnswerState(){
+  const q=S.deck.length?qmap.get(S.deck[S.pos]):null;
+  const a=q&&S.answers[q.id];
+  if(a){S.sel=new Set(a.sel);S.graded=true;}
+  else{S.sel=new Set();S.graded=false;}
+}
 function advance(dir){
   S.anim=dir>=0?'right':'left';
   if(S.pos>=S.deck.length-1){
     if(S.mode==='quiz'){S.done=true;}
     else{S.anim='pop';toast('Hết bộ thẻ — xáo trộn và ôn lại nhé!');}
   } else S.pos++;
-  S.flipped=false;S.sel.clear();S.graded=false;S.fresh=true;render();saveProgress();
+  S.flipped=false;S.fresh=true;loadAnswerState();render();saveProgress();
 }
 function prev(){
-  if(S.pos>0){S.pos--;S.anim='left';S.flipped=false;S.sel.clear();S.graded=false;S.done=false;S.fresh=true;render();saveProgress();}
+  if(S.pos>0){S.pos--;S.anim='left';S.flipped=false;S.done=false;S.fresh=true;loadAnswerState();render();saveProgress();}
 }
 
 /* ================= ACTIONS ================= */
@@ -634,6 +642,7 @@ function grade(q){
   }else{
     S.runNo++;S.wrong.add(q.id);S.learned.delete(q.id);
   }
+  S.answers[q.id]={sel:[...S.sel]};
   renderHeaderStats();saveProgress();
 }
 function setDeck(def){S.deckDef=def;buildDeck();syncRangeSel();render();saveProgress();}
@@ -780,10 +789,12 @@ document.addEventListener('keydown',e=>{
   buildDeck();
   if(p&&Number.isInteger(p.pos)&&p.pos>0&&p.pos<S.deck.length){S.pos=p.pos;S.anim='pop';}
   if(p){
+    if(p.answers&&typeof p.answers==='object')S.answers=p.answers;
     if(Number.isInteger(p.runOk))S.runOk=p.runOk;
     if(Number.isInteger(p.runNo))S.runNo=p.runNo;
     S.done=!!p.done;
-    if(!S.shuffle){ S.graded=!!p.graded; if(Array.isArray(p.sel))S.sel=new Set(p.sel); }
+    loadAnswerState();
+    if(!S.graded&&Array.isArray(p.sel)&&p.sel.length)S.sel=new Set(p.sel);
   }
   syncRangeSel();
   render();
