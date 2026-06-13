@@ -316,7 +316,8 @@ function saveProgress(){
   saveTimer=setTimeout(async ()=>{
     const payload = JSON.stringify({
       learned:[...S.learned], starred:[...S.starred], wrong:[...S.wrong], hideLearned:S.hideLearned,
-      pos:S.pos, deckDef:S.deckDef, mode:S.mode, shuffle:S.shuffle
+      pos:S.pos, deckDef:S.deckDef, mode:S.mode, shuffle:S.shuffle,
+      runOk:S.runOk, runNo:S.runNo, done:S.done, graded:S.graded, sel:[...S.sel]
     });
     S.mem[KEY]=payload;
     try{ localStorage.setItem(KEY,payload); }catch(e){}
@@ -778,6 +779,12 @@ document.addEventListener('keydown',e=>{
   }
   buildDeck();
   if(p&&Number.isInteger(p.pos)&&p.pos>0&&p.pos<S.deck.length){S.pos=p.pos;S.anim='pop';}
+  if(p){
+    if(Number.isInteger(p.runOk))S.runOk=p.runOk;
+    if(Number.isInteger(p.runNo))S.runNo=p.runNo;
+    S.done=!!p.done;
+    if(!S.shuffle){ S.graded=!!p.graded; if(Array.isArray(p.sel))S.sel=new Set(p.sel); }
+  }
   syncRangeSel();
   render();
 })();
